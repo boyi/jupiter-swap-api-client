@@ -15,6 +15,8 @@ pub mod transaction_config;
 #[derive(Clone)]
 pub struct JupiterSwapApiClient {
     pub base_path: String,
+    api_key: Option<String>,
+    client: Client,
 }
 
 #[derive(Debug, Error)]
@@ -49,19 +51,33 @@ async fn check_status_code_and_deserialize<T: DeserializeOwned>(
 
 impl JupiterSwapApiClient {
     pub fn new(base_path: String) -> Self {
-        Self { base_path }
+        Self::with_api_key(base_path, None)
+    }
+
+    pub fn with_api_key(base_path: String, api_key: Option<String>) -> Self {
+        Self {
+            base_path,
+            api_key,
+            client: Client::new(),
+        }
+    }
+
+    fn add_api_key(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        match &self.api_key {
+            Some(key) => request.header("x-api-key", key),
+            None => request,
+        }
     }
 
     pub async fn quote(&self, quote_request: &QuoteRequest) -> Result<QuoteResponse, ClientError> {
         let url = format!("{}/quote", self.base_path);
         let extra_args = quote_request.quote_args.clone();
         let internal_quote_request = InternalQuoteRequest::from(quote_request.clone());
-        let response = Client::new()
+        let request = self.client
             .get(url)
             .query(&internal_quote_request)
-            .query(&extra_args)
-            .send()
-            .await?;
+            .query(&extra_args);
+        let response = self.add_api_key(request).send().await?;
         check_status_code_and_deserialize(response).await
     }
 
@@ -70,12 +86,11 @@ impl JupiterSwapApiClient {
         swap_request: &SwapRequest,
         extra_args: Option<HashMap<String, String>>,
     ) -> Result<SwapResponse, ClientError> {
-        let response = Client::new()
+        let request = self.client
             .post(format!("{}/swap", self.base_path))
             .query(&extra_args)
-            .json(swap_request)
-            .send()
-            .await?;
+            .json(swap_request);
+        let response = self.add_api_key(request).send().await?;
         check_status_code_and_deserialize(response).await
     }
 
@@ -83,11 +98,10 @@ impl JupiterSwapApiClient {
         &self,
         swap_request: &SwapRequest,
     ) -> Result<SwapInstructionsResponse, ClientError> {
-        let response = Client::new()
+        let request = self.client
             .post(format!("{}/swap-instructions", self.base_path))
-            .json(swap_request)
-            .send()
-            .await?;
+            .json(swap_request);
+        let response = self.add_api_key(request).send().await?;
         check_status_code_and_deserialize::<SwapInstructionsResponseInternal>(response)
             .await
             .map(Into::into)

@@ -11,6 +11,8 @@ pub type RoutePlanWithMetadata = Vec<RoutePlanStep>;
 pub struct RoutePlanStep {
     pub swap_info: SwapInfo,
     pub percent: u8,
+    #[serde(default)]
+    pub bps: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
@@ -29,8 +31,4 @@ pub struct SwapInfo {
     /// An estimation of the output amount into the AMM
     #[serde(with = "field_as_string")]
     pub out_amount: u64,
-    #[serde(with = "field_as_string")]
-    pub fee_amount: u64,
-    #[serde(with = "field_as_string")]
-    pub fee_mint: Pubkey,
 }

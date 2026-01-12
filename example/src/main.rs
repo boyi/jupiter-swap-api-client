@@ -19,13 +19,13 @@ const NATIVE_MINT: Pubkey = pubkey!("So11111111111111111111111111111111111111112
 pub const TEST_WALLET: Pubkey = pubkey!("2AQdpHJ2JpcEgPiATUXjQxA8QmafFegfQwSLWSprPicm");
 
 #[tokio::main]
-// Use anyhow::Result for ergonomic error handling throughout the asynchronous main function.
 async fn main() -> Result<()> {
-    // Determine the Jupiter API base URL, falling back to the standard endpoint.
-    let api_base_url = env::var("API_BASE_URL").unwrap_or_else(|_| "https://quote-api.jup.ag/v6".into());
-    println!("Using Jupiter base url: {}", api_base_url);
+    let api_base_url = env::var("API_BASE_URL").unwrap_or("https://api.jup.ag/swap/v1".into());
+    let api_key = env::var("JUPITER_API_KEY")
+        .expect("JUPITER_API_KEY environment variable is required");
+    println!("Using base url: {}", api_base_url);
 
-    let jupiter_swap_api_client = JupiterSwapApiClient::new(api_base_url);
+    let jupiter_swap_api_client = JupiterSwapApiClient::with_api_key(api_base_url, Some(api_key));
 
     // --- 1. GET /quote ---
     
